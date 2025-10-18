@@ -813,7 +813,69 @@
             }
         }
         
-        @media (max-width: 480px) {
+        @media (max-width: 480px)/* أنماط عرض الشرائح */
+        .slideshow-container {
+            position: relative;
+            max-width: 800px;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        .slideshow-image {
+            width: 100%;
+            height: 400px;
+            object-fit: contain;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .slideshow-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .slideshow-btn {
+            background-color: #D4AF37;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .slideshow-btn:hover {
+            background-color: #c9a227;
+            transform: translateY(-2px);
+        }
+        
+        .slideshow-counter {
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .slideshow-toggle {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px auto;
+            display: block;
+            transition: all 0.3s;
+        }
+        
+        .slideshow-toggle:hover {
+            background-color: #1a252f;
+            transform: translateY(-2px);
+        } {
             .media-files-container {
                 grid-template-columns: 1fr;
             }
@@ -959,6 +1021,19 @@
         </div>
         
         <div class="media-files-container" id="mediaFilesContainer">
+        <!-- عرض الشرائح -->
+        <button class="slideshow-toggle" onclick="toggleSlideshow()">عرض الشرائح</button>
+        
+        <div class="slideshow-container" id="slideshowContainer">
+            <img class="slideshow-image" id="slideshowImage" src="" alt="شريحة">
+            <div class="slideshow-counter" id="slideshowCounter"></div>
+            <div class="slideshow-controls">
+                <button class="slideshow-btn" onclick="previousSlide()">السابق</button>
+                <button class="slideshow-btn" onclick="playPauseSlideshow()" id="playPauseBtn">تشغيل</button>
+                <button class="slideshow-btn" onclick="nextSlide()">التالي</button>
+                <button class="slideshow-btn" onclick="exitSlideshow()">خروج</button>
+            </div>
+        </div>
             <!-- سيتم عرض الملفات المرفوعة هنا -->
         </div>
     </div>
@@ -1602,6 +1677,9 @@
                 
                 container.appendChild(card);
             });
+            // إخفاء عرض الشرائح إذا كان ظاهراً
+    document.getElementById('slideshowContainer').style.display = 'none';
+    document.querySelector('.slideshow-toggle').textContent = 'عرض الشرائح';
         }
         
         // دالة فتح الصورة في نافذة كبيرة
@@ -1657,7 +1735,116 @@
             if (bytes < 1024) return bytes + ' بايت';
             else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' كيلوبايت';
             else return (bytes / 1048576).toFixed(1) + ' ميجابايت';
+        }// متغيرات عرض الشرائح
+        let currentSlideIndex = 0;
+        let slideshowInterval = null;
+        let isSlideshowPlaying = false;
+        let currentSlideshowImages = [];
+        
+        // دالة تبديل عرض الشرائح
+        function toggleSlideshow() {
+            const slideshowContainer = document.getElementById('slideshowContainer');
+            const currentImages = mediaFiles.filter(file => 
+                file.type === 'image' && 
+                (!currentMediaGrade || file.grade === currentMediaGrade)
+            );
+            
+            if (currentImages.length === 0) {
+                showAlert('لا توجد صور لعرضها في الشرائح', 'error');
+                return;
+            }
+            
+            currentSlideshowImages = currentImages;
+            currentSlideIndex = 0;
+            
+            if (slideshowContainer.style.display === 'block') {
+                exitSlideshow();
+            } else {
+                slideshowContainer.style.display = 'block';
+                document.getElementById('mediaFilesContainer').style.display = 'none';
+                document.querySelector('.slideshow-toggle').textContent = 'إخفاء الشرائح';
+                showSlide(0);
+                startSlideshow();
+            }
         }
+        
+        // دالة عرض شريحة محددة
+        function showSlide(index) {
+            if (currentSlideshowImages.length === 0) return;
+            
+            currentSlideIndex = (index + currentSlideshowImages.length) % currentSlideshowImages.length;
+            const slide = currentSlideshowImages[currentSlideIndex];
+            
+            document.getElementById('slideshowImage').src = slide.data;
+            document.getElementById('slideshowCounter').textContent = 
+                `${currentSlideIndex + 1} / ${currentSlideshowImages.length} - ${slide.name}`;
+        }
+        
+        // دالة الشريحة التالية
+        function nextSlide() {
+            showSlide(currentSlideIndex + 1);
+        }
+        
+        // دالة الشريحة السابقة
+        function previousSlide() {
+            showSlide(currentSlideIndex - 1);
+        }
+        
+        // دالة تشغيل/إيقاف الشرائح تلقائياً
+        function playPauseSlideshow() {
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            
+            if (isSlideshowPlaying) {
+                clearInterval(slideshowInterval);
+                playPauseBtn.textContent = 'تشغيل';
+            } else {
+                slideshowInterval = setInterval(nextSlide, 3000); // تغيير الشريحة كل 3 ثواني
+                playPauseBtn.textContent = 'إيقاف';
+            }
+            
+            isSlideshowPlaying = !isSlideshowPlaying;
+        }
+        
+        // دالة بدء عرض الشرائح تلقائياً
+        function startSlideshow() {
+            if (!isSlideshowPlaying) {
+                playPauseSlideshow();
+            }
+        }
+        
+        // دالة الخروج من عرض الشرائح
+        function exitSlideshow() {
+            const slideshowContainer = document.getElementById('slideshowContainer');
+            slideshowContainer.style.display = 'none';
+            document.getElementById('mediaFilesContainer').style.display = 'grid';
+            document.querySelector('.slideshow-toggle').textContent = 'عرض الشرائح';
+            
+            if (isSlideshowPlaying) {
+                playPauseSlideshow();
+            }
+        }
+        
+        // إضافة تحكم بالأزرار في لوحة المفاتيح
+        document.addEventListener('keydown', function(event) {
+            const slideshowContainer = document.getElementById('slideshowContainer');
+            if (slideshowContainer.style.display === 'block') {
+                switch(event.key) {
+                    case 'ArrowLeft':
+                        previousSlide();
+                        break;
+                    case 'ArrowRight':
+                        nextSlide();
+                        break;
+                    case ' ':
+                        event.preventDefault();
+                        playPauseSlideshow();
+                        break;
+                    case 'Escape':
+                        exitSlideshow();
+                        break;
+                }
+            }
+        });
         
         // دالة إضافة فيديو يوتيوب
         function addYoutubeVideo() {
@@ -1892,4 +2079,5 @@
     </script>
 </body>
 </html>
+
 
